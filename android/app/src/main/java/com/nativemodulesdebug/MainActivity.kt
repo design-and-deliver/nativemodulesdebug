@@ -20,13 +20,21 @@ class MainActivity : ReactActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "onCreate called")
+        handleIntent(intent)
+    }
 
-        // Handle the incoming share intent
-        if (intent?.action == Intent.ACTION_SEND) {
-            Log.d("MainActivity", "Intent action is SEND")
-            if (intent.type == "text/plain") {
-                Log.d("MainActivity", "Intent type is text/plain")
-                handleSendText(intent) // Handle text being sent
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        Log.d("MainActivity", "onNewIntent called")
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        intent?.let {
+            if (it.action == Intent.ACTION_SEND && it.type == "text/plain") {
+                Log.d("MainActivity", "Intent action is SEND and type is text/plain")
+                handleSendText(it)
             }
         }
     }
@@ -35,29 +43,18 @@ class MainActivity : ReactActivity() {
         val text = intent.getStringExtra(Intent.EXTRA_TEXT)
         Log.d("MainActivity", "handleSendText called with text: $text")
         text?.let {
-            // Send the text to React Native
             sendEventToReactNative(it)
-        }
-    }
-
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        Log.d("MainActivity", "onNewIntent called")
-
-        // Handle the new intent
-        if (intent.action == Intent.ACTION_SEND && intent.type == "text/plain") {
-            Log.d("MainActivity", "New Intent action is SEND and type is text/plain")
-            handleSendText(intent)
         }
     }
 
     private fun sendEventToReactNative(sharedText: String) {
         val reactContext = reactInstanceManager?.currentReactContext
-        reactContext?.let {
-            it
+        if (reactContext != null) {
+            reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
                 .emit("ShareText", sharedText)
+        } else {
+            Log.e("MainActivity", "ReactContext is null")
         }
     }
 }
